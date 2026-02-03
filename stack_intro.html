@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stack Simulation — Interactive Animation for Students</title>
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0B1230;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --stroke: rgba(255,255,255,0.14);
+      --stroke2: rgba(255,255,255,0.22);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --muted2: rgba(255,255,255,0.55);
+      --accent:#7C5CFF;
+      --accent2:#22D3EE;
+      --good:#34D399;
+      --warn:#FBBF24;
+      --bad:#FB7185;
+
+      --shadow: 0 18px 60px rgba(0,0,0,0.55);
+      --shadow2: 0 10px 30px rgba(0,0,0,0.35);
+
+      --radius: 18px;
+      --radius2: 14px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color: var(--text);
+      background:
+        radial-gradient(1200px 650px at 18% 15%, rgba(124,92,255,0.28), transparent 58%),
+        radial-gradient(900px 520px at 75% 40%, rgba(34,211,238,0.22), transparent 55%),
+        radial-gradient(850px 520px at 50% 95%, rgba(52,211,153,0.14), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.05), transparent 30%, transparent 70%, rgba(255,255,255,0.04)),
+        radial-gradient(900px 500px at 60% 10%, rgba(255,255,255,0.05), transparent 60%);
+      pointer-events:none;
+      mix-blend-mode: overlay;
+      opacity:0.55;
+    }
+
+    header{
+      padding: 22px 18px 10px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      padding: 18px 18px;
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand{
+      display:flex; flex-direction:column; gap:6px;
+      min-width: 240px;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+      font-weight: 750;
+      line-height:1.2;
+    }
+    .brand p{
+      margin:0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.35;
+    }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,0.18);
+      color: var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .dot{
+      width: 8px; height: 8px; border-radius:999px;
+      background: var(--good);
+      box-shadow: 0 0 0 3px rgba(52,211,153,0.15);
+    }
+    .dot.paused{
+      background: var(--warn);
+      box-shadow: 0 0 0 3px rgba(251,191,36,0.15);
+    }
+
+    main{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 18px 26px;
+      display:grid;
+      grid-template-columns: 1.25fr 0.95fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 980px){
+      main{ grid-template-columns: 1fr; }
+      .brand{ min-width:auto; }
+    }
+
+    .card{
+      border:1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+
+    .cardHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 14px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.09);
+      background: linear-gradient(180deg, rgba(0,0,0,0.12), transparent);
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: 0.2px;
+      color: rgba(255,255,255,0.92);
+      display:flex; align-items:center; gap:8px;
+    }
+    .badge{
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      color: var(--muted);
+      background: rgba(0,0,0,0.18);
+    }
+
+    .cardBody{ padding: 14px; }
+
+    /* Controls */
+    .controls{
+      display:flex; flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 12px 14px;
+      border-bottom:1px solid rgba(255,255,255,0.09);
+      background: linear-gradient(180deg, rgba(0,0,0,0.06), transparent);
+    }
+    .controls .left, .controls .right{
+      display:flex; flex-wrap:wrap; gap: 10px;
+      align-items:center;
+    }
+
+    button{
+      appearance:none;
+      border: 1px solid var(--stroke2);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor:pointer;
+      transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.28); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      border-color: rgba(124,92,255,0.55);
+      background: linear-gradient(180deg, rgba(124,92,255,0.35), rgba(124,92,255,0.18));
+    }
+    button.primary:hover{
+      border-color: rgba(124,92,255,0.75);
+      background: linear-gradient(180deg, rgba(124,92,255,0.42), rgba(124,92,255,0.22));
+    }
+    button.ghost{
+      background: rgba(0,0,0,0.18);
+      border-color: var(--stroke);
+      color: var(--muted);
+    }
+
+    .field{
+      display:flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,0.18);
+      color: var(--muted);
+    }
+    .field label{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    input[type="number"]{
+      width: 96px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 700;
+      outline:none;
+    }
+    input[type="number"]:focus{
+      border-color: rgba(34,211,238,0.55);
+      box-shadow: 0 0 0 4px rgba(34,211,238,0.15);
+    }
+
+    .sliderWrap{
+      display:flex; align-items:center; gap:10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,0.18);
+    }
+    .sliderWrap .meta{
+      display:flex; flex-direction:column; gap:2px;
+      min-width: 140px;
+    }
+    .sliderWrap .meta span{
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.2;
+    }
+    .sliderWrap .meta strong{
+      font-size: 12px;
+      color: rgba(255,255,255,0.92);
+      letter-spacing:0.2px;
+    }
+    input[type="range"]{
+      width: 180px;
+      accent-color: var(--accent2);
+    }
+
+    .progress{
+      height: 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.22);
+      overflow:hidden;
+      width: 240px;
+    }
+    .progress > div{
+      height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 999px;
+      transition: width 0.08s linear;
+    }
+
+    /* Visualization */
+    .viz{
+      display:grid;
+      grid-template-rows: auto auto 1fr auto;
+      min-height: 560px;
+    }
+
+    .stage{
+      padding: 12px 14px 8px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .stageMeta{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .stageMeta .kv{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .stageMeta code{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.18);
+      color: rgba(255,255,255,0.82);
+    }
+
+    .svgWrap{
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius2);
+      background:
+        radial-gradient(800px 420px at 55% 10%, rgba(124,92,255,0.14), transparent 60%),
+        radial-gradient(520px 360px at 25% 55%, rgba(34,211,238,0.10), transparent 60%),
+        rgba(0,0,0,0.18);
+      overflow:hidden;
+      position:relative;
+      min-height: 420px;
+    }
+
+    .toast{
+      position:absolute;
+      left: 12px;
+      bottom: 12px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.35);
+      color: rgba(255,255,255,0.90);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+      backdrop-filter: blur(10px);
+      transform: translateY(8px);
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      max-width: calc(100% - 24px);
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateY(0px);
+    }
+    .toast .tag{
+      font-weight: 900;
+      font-size: 11px;
+      letter-spacing:0.3px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .toast .msg{
+      font-size: 12px;
+      color: rgba(255,255,255,0.88);
+      line-height:1.25;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    /* Narration */
+    .narr{
+      display:grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 560px;
+    }
+    .narrBody{
+      padding: 14px;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+
+    .bigTitle{
+      font-size: 18px;
+      font-weight: 850;
+      letter-spacing: 0.1px;
+      margin: 0;
+      line-height:1.25;
+    }
+    .subtitle{
+      margin:0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.45;
+    }
+
+    .panel{
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius2);
+      background: rgba(0,0,0,0.18);
+      padding: 12px 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .panelTitle{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+    }
+    .panelTitle h3{
+      margin:0;
+      font-size: 12px;
+      color: rgba(255,255,255,0.84);
+      letter-spacing:0.22px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .panelTitle span{
+      color: var(--muted2);
+      font-size: 12px;
+    }
+
+    .bullet{
+      display:grid;
+      grid-template-columns: 14px 1fr;
+      gap: 10px;
+      align-items:flex-start;
+      color: rgba(255,255,255,0.86);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .bullet .b{
+      width: 10px; height:10px; margin-top:5px; border-radius: 999px;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 0 3px rgba(124,92,255,0.16);
+    }
+    .muted{ color: var(--muted); }
+
+    pre{
+      margin:0;
+      padding: 12px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.28);
+      border:1px solid rgba(255,255,255,0.12);
+      overflow:auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    pre code{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: rgba(255,255,255,0.86);
+      line-height: 1.5;
+      white-space: pre;
+    }
+
+    .stepList{
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .stepItem{
+      display:flex; gap:10px; align-items:flex-start;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .stepItem.active{
+      border-color: rgba(34,211,238,0.45);
+      background: rgba(34,211,238,0.08);
+    }
+    .stepItem .idx{
+      width: 22px; height: 22px; border-radius: 8px;
+      display:flex; align-items:center; justify-content:center;
+      font-size: 12px;
+      font-weight: 900;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.18);
+      color: rgba(255,255,255,0.85);
+      flex: 0 0 auto;
+    }
+    .stepItem .txt{
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .stepItem .txt strong{
+      font-size: 12px; font-weight: 850;
+      color: rgba(255,255,255,0.90);
+    }
+    .stepItem .txt span{
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.35;
+    }
+
+    .footerHint{
+      padding: 10px 14px 14px;
+      color: var(--muted2);
+      font-size: 12px;
+      line-height: 1.45;
+      border-top: 1px solid rgba(255,255,255,0.09);
+      background: linear-gradient(180deg, rgba(0,0,0,0.04), transparent);
+    }
+
+    /* 小调整：控制条在标题下时更“紧凑”一点 */
+    .viz .controls{
+      border-top: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <h1>Stack Simulation (LIFO) — Playable, Pausable Animation</h1>
+        <p>A polished interactive stack animation: play/pause, speed control, and synchronized English narration.</p>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+        <div class="pill" id="statusPill">
+          <span class="dot paused" id="statusDot"></span>
+          <span id="statusText">Paused</span>
+        </div>
+        <div class="pill">
+          <span style="color:rgba(255,255,255,0.75); font-weight:800;">Tip</span>
+          <span>Try <b>Push</b>/<b>Pop</b> while paused.</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Visualization -->
+    <section class="card viz">
+      <div class="cardHeader">
+        <h2>
+          <span style="width:10px;height:10px;border-radius:999px;background:linear-gradient(180deg,var(--accent),var(--accent2)); box-shadow:0 0 0 3px rgba(124,92,255,0.16);"></span>
+          Visual Simulation
+        </h2>
+        <span class="badge" id="opBadge">Operation: —</span>
+      </div>
+
+      <!-- ✅ 控制条移动到标题下方 -->
+      <div class="controls">
+        <div class="left">
+          <button class="primary" id="playPauseBtn">Play</button>
+          <button class="ghost" id="resetBtn">Reset Demo</button>
+          <button class="ghost" id="skipBtn">Skip Step</button>
+
+          <div class="sliderWrap">
+            <div class="meta">
+              <span>Animation speed</span>
+              <strong id="speedLabel">1.00×</strong>
+            </div>
+            <input id="speed" type="range" min="0.25" max="3" step="0.05" value="1" />
+          </div>
+        </div>
+
+        <div class="right">
+          <div class="field" title="Push value (integer)">
+            <label for="pushVal">Push</label>
+            <input id="pushVal" type="number" value="8" />
+            <button id="pushBtn">Add</button>
+          </div>
+          <button id="popBtn">Pop</button>
+          <button id="peekBtn">Peek</button>
+        </div>
+      </div>
+
+      <!-- 动画区域 -->
+      <div class="stage">
+        <div class="stageMeta">
+          <div class="kv">
+            <span>Capacity: <code id="capCode">6</code></span>
+            <span>Size: <code id="sizeCode">0</code></span>
+            <span>Top: <code id="topCode">∅</code></span>
+          </div>
+          <div class="kv">
+            <span>Demo Progress</span>
+            <div class="progress" aria-label="progress">
+              <div id="progressBar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="svgWrap">
+          <svg id="svg" viewBox="0 0 900 520" width="100%" height="100%" role="img" aria-label="stack animation">
+            <defs>
+              <linearGradient id="frameGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="rgba(124,92,255,0.75)"/>
+                <stop offset="1" stop-color="rgba(34,211,238,0.75)"/>
+              </linearGradient>
+
+              <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="7" result="blur"/>
+                <feColorMatrix in="blur" type="matrix"
+                  values="1 0 0 0 0
+                          0 1 0 0 0
+                          0 0 1 0 0
+                          0 0 0 0.35 0" result="glow"/>
+                <feMerge>
+                  <feMergeNode in="glow"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+
+              <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="rgba(0,0,0,0.45)"/>
+              </filter>
+            </defs>
+
+            <g opacity="0.25">
+              <path d="M60 60 H840" stroke="rgba(255,255,255,0.08)"/>
+              <path d="M60 120 H840" stroke="rgba(255,255,255,0.06)"/>
+              <path d="M60 180 H840" stroke="rgba(255,255,255,0.06)"/>
+              <path d="M60 240 H840" stroke="rgba(255,255,255,0.06)"/>
+              <path d="M60 300 H840" stroke="rgba(255,255,255,0.06)"/>
+              <path d="M60 360 H840" stroke="rgba(255,255,255,0.06)"/>
+              <path d="M60 420 H840" stroke="rgba(255,255,255,0.06)"/>
+              <path d="M60 480 H840" stroke="rgba(255,255,255,0.06)"/>
+            </g>
+
+            <g id="frame" filter="url(#softGlow)">
+              <rect x="210" y="430" width="300" height="18" rx="9" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.16)"/>
+              <rect x="225" y="130" width="16" height="300" rx="8" fill="rgba(255,255,255,0.08)" stroke="url(#frameGrad)" opacity="0.95"/>
+              <rect x="479" y="130" width="16" height="300" rx="8" fill="rgba(255,255,255,0.08)" stroke="url(#frameGrad)" opacity="0.95"/>
+              <g id="slots"></g>
+              <text x="360" y="105" text-anchor="middle" fill="rgba(255,255,255,0.86)" font-weight="900" font-size="16" letter-spacing="0.5">
+                STACK (LIFO)
+              </text>
+              <text x="360" y="126" text-anchor="middle" fill="rgba(255,255,255,0.58)" font-weight="700" font-size="12">
+                Last In, First Out
+              </text>
+            </g>
+
+            <g id="halo"></g>
+            <g id="blocks"></g>
+
+            <g id="topPointer" opacity="0.95">
+              <path d="M545 155 C590 155 612 155 650 155" stroke="rgba(255,255,255,0.22)" stroke-width="2" fill="none"/>
+              <path d="M650 155 l-12 -8 v16 z" fill="rgba(255,255,255,0.22)"/>
+              <text x="660" y="160" fill="rgba(255,255,255,0.72)" font-size="12" font-weight="800">TOP</text>
+            </g>
+
+            <g id="callout" opacity="0">
+              <rect x="560" y="195" width="300" height="86" rx="14" fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.14)"/>
+              <text id="calloutTitle" x="580" y="220" fill="rgba(255,255,255,0.90)" font-size="12" font-weight="900">—</text>
+              <text id="calloutLine1" x="580" y="246" fill="rgba(255,255,255,0.72)" font-size="12" font-weight="700">—</text>
+              <text id="calloutLine2" x="580" y="268" fill="rgba(255,255,255,0.62)" font-size="11" font-weight="700">—</text>
+            </g>
+          </svg>
+
+          <div class="toast" id="toast">
+            <span class="tag" id="toastTag">INFO</span>
+            <span class="msg" id="toastMsg">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footerHint">
+        Teaching tip: run the default demo first (the narration syncs on the right). Then pause and explore with Push/Pop/Peek. Speed control helps you see each sub-step clearly.
+      </div>
+    </section>
+
+    <!-- Narration -->
+    <section class="card narr">
+      <div class="cardHeader">
+        <h2>
+          <span style="width:10px;height:10px;border-radius:999px;background:linear-gradient(180deg,var(--accent2),var(--good)); box-shadow:0 0 0 3px rgba(34,211,238,0.14);"></span>
+          English Guide (Synchronized)
+        </h2>
+        <span class="badge" id="stepBadge">Step 1 / —</span>
+      </div>
+
+      <div class="narrBody">
+        <div>
+          <h3 class="bigTitle" id="nTitle">Welcome — What is a Stack?</h3>
+          <p class="subtitle" id="nSubtitle">
+            A stack is a linear data structure where the last inserted element is the first one removed (LIFO).
+          </p>
+        </div>
+
+        <div class="panel">
+          <div class="panelTitle">
+            <h3>Live Explanation</h3>
+            <span id="nPhase">phase: —</span>
+          </div>
+
+          <div class="bullet">
+            <div class="b"></div>
+            <div id="nBullet1">We always insert and remove from the same end: the <b>top</b>.</div>
+          </div>
+          <div class="bullet">
+            <div class="b"></div>
+            <div id="nBullet2">Push adds a new element on top; pop removes the current top element.</div>
+          </div>
+          <div class="bullet">
+            <div class="b"></div>
+            <div id="nBullet3" class="muted">Watch how the “TOP” pointer moves as the animation runs.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panelTitle">
+            <h3>Pseudocode</h3>
+            <span id="codeHint">linked to current step</span>
+          </div>
+          <pre><code id="codeBlock">stack = []
+
+push(x):
+  stack.append(x)
+
+pop():
+  if stack is empty: error
+  return stack.removeLast()
+
+peek():
+  if stack is empty: error
+  return stack.last()</code></pre>
+        </div>
+
+        <div class="panel">
+          <div class="panelTitle">
+            <h3>Timeline</h3>
+            <span class="muted">demo steps</span>
+          </div>
+          <div class="stepList" id="stepList"></div>
+        </div>
+      </div>
+
+      <div class="footerHint">
+        Invariant: aside from the top element changing, the relative order of the remaining elements never changes; all operations happen at the <b>top</b>.
+      </div>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const clamp = (v,min,max)=>Math.max(min, Math.min(max,v));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const easeOutCubic = (t)=>1-Math.pow(1-t,3);
+  const easeInOutCubic = (t)=> t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+
+  function hslToHex(h, s, l) {
+    s/=100; l/=100;
+    const c = (1 - Math.abs(2*l - 1)) * s;
+    const x = c * (1 - Math.abs((h/60) % 2 - 1));
+    const m = l - c/2;
+    let r=0,g=0,b=0;
+    if (h < 60) [r,g,b] = [c,x,0];
+    else if (h < 120) [r,g,b] = [x,c,0];
+    else if (h < 180) [r,g,b] = [0,c,x];
+    else if (h < 240) [r,g,b] = [0,x,c];
+    else if (h < 300) [r,g,b] = [x,0,c];
+    else [r,g,b] = [c,0,x];
+    const toHex = (n)=>Math.round((n+m)*255).toString(16).padStart(2,'0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
+  const $ = (id)=>document.getElementById(id);
+
+  const playPauseBtn = $("playPauseBtn");
+  const resetBtn = $("resetBtn");
+  const skipBtn = $("skipBtn");
+
+  const speed = $("speed");
+  const speedLabel = $("speedLabel");
+
+  const pushVal = $("pushVal");
+  const pushBtn = $("pushBtn");
+  const popBtn = $("popBtn");
+  const peekBtn = $("peekBtn");
+
+  const statusDot = $("statusDot");
+  const statusText = $("statusText");
+
+  const opBadge = $("opBadge");
+  const capCode = $("capCode");
+  const sizeCode = $("sizeCode");
+  const topCode = $("topCode");
+
+  const progressBar = $("progressBar");
+
+  const stepBadge = $("stepBadge");
+  const stepList = $("stepList");
+
+  const nTitle = $("nTitle");
+  const nSubtitle = $("nSubtitle");
+  const nPhase = $("nPhase");
+  const nBullet1 = $("nBullet1");
+  const nBullet2 = $("nBullet2");
+  const nBullet3 = $("nBullet3");
+  const codeBlock = $("codeBlock");
+
+  const gSlots = $("slots");
+  const gBlocks = $("blocks");
+  const gHalo = $("halo");
+
+  const callout = $("callout");
+  const calloutTitle = $("calloutTitle");
+  const calloutLine1 = $("calloutLine1");
+  const calloutLine2 = $("calloutLine2");
+
+  const toast = $("toast");
+  const toastTag = $("toastTag");
+  const toastMsg = $("toastMsg");
+
+  const CAPACITY = 6;
+  capCode.textContent = String(CAPACITY);
+
+  const STACK_X = 250;
+  const STACK_Y_TOP = 150;
+  const SLOT_H = 46;
+  const SLOT_GAP = 10;
+  const SLOT_TOTAL = SLOT_H + SLOT_GAP;
+  const BLOCK_H = 42;
+  const BLOCK_W = 200;
+
+  const SPAWN_X = STACK_X + 10;
+  const SPAWN_Y = 70;
+  const EXIT_X = 70;
+  const EXIT_Y = 70;
+
+  function renderSlots(){
+    gSlots.innerHTML = "";
+    for(let i=0;i<CAPACITY;i++){
+      const slotIndexFromBottom = i;
+      const y = STACK_Y_TOP + (CAPACITY-1 - slotIndexFromBottom)*SLOT_TOTAL;
+      const x = STACK_X + 10;
+      const w = BLOCK_W;
+      const h = BLOCK_H;
+
+      const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+      r.setAttribute("x", x);
+      r.setAttribute("y", y);
+      r.setAttribute("width", w);
+      r.setAttribute("height", h);
+      r.setAttribute("rx", 14);
+      r.setAttribute("fill", "rgba(255,255,255,0.03)");
+      r.setAttribute("stroke", "rgba(255,255,255,0.10)");
+      r.setAttribute("stroke-dasharray", "6 8");
+      gSlots.appendChild(r);
+
+      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x", x + w + 18);
+      t.setAttribute("y", y + 26);
+      t.setAttribute("fill", "rgba(255,255,255,0.50)");
+      t.setAttribute("font-size", "12");
+      t.setAttribute("font-weight", "800");
+      t.textContent = `slot ${CAPACITY-1-i}`;
+      gSlots.appendChild(t);
+    }
+  }
+  renderSlots();
+
+  function slotYForStackIndex(stackIndex){
+    return STACK_Y_TOP + (CAPACITY-1 - stackIndex)*SLOT_TOTAL;
+  }
+
+  let toastTimer = null;
+  function showToast(type, message){
+    toastTag.textContent = type.toUpperCase();
+    toastMsg.textContent = message;
+
+    const colors = {
+      info: "rgba(255,255,255,0.22)",
+      ok: "rgba(52,211,153,0.35)",
+      warn: "rgba(251,191,36,0.35)",
+      error: "rgba(251,113,133,0.40)"
+    };
+    toastTag.style.borderColor = colors[type] || colors.info;
+
+    toast.classList.add("show");
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>toast.classList.remove("show"), 1700);
+  }
+
+  let blockIdCounter = 1;
+  function makeBlockNode(block){
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("data-id", block.id);
+    g.setAttribute("filter", "url(#shadow)");
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttribute("x", 0);
+    rect.setAttribute("y", 0);
+    rect.setAttribute("width", BLOCK_W);
+    rect.setAttribute("height", BLOCK_H);
+    rect.setAttribute("rx", 14);
+    rect.setAttribute("fill", block.color);
+    rect.setAttribute("opacity", "0.95");
+
+    const rect2 = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect2.setAttribute("x", 0);
+    rect2.setAttribute("y", 0);
+    rect2.setAttribute("width", BLOCK_W);
+    rect2.setAttribute("height", BLOCK_H);
+    rect2.setAttribute("rx", 14);
+    rect2.setAttribute("fill", "rgba(255,255,255,0.08)");
+    rect2.setAttribute("opacity", "0.90");
+
+    const valueText = document.createElementNS("http://www.w3.org/2000/svg","text");
+    valueText.setAttribute("x", 16);
+    valueText.setAttribute("y", 27);
+    valueText.setAttribute("fill", "rgba(255,255,255,0.92)");
+    valueText.setAttribute("font-size", "15");
+    valueText.setAttribute("font-weight", "900");
+    valueText.textContent = String(block.value);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+    label.setAttribute("x", BLOCK_W - 16);
+    label.setAttribute("y", 27);
+    label.setAttribute("fill", "rgba(255,255,255,0.78)");
+    label.setAttribute("font-size", "12");
+    label.setAttribute("font-weight", "900");
+    label.setAttribute("text-anchor", "end");
+    label.textContent = "element";
+
+    g.appendChild(rect);
+    g.appendChild(rect2);
+    g.appendChild(valueText);
+    g.appendChild(label);
+
+    gBlocks.appendChild(g);
+
+    block._node = g;
+    return g;
+  }
+
+  function setNodeTransform(block){
+    const s = block.scale ?? 1;
+    block._node.setAttribute("transform", `translate(${block.x}, ${block.y}) scale(${s})`);
+    block._node.setAttribute("opacity", String(block.opacity ?? 1));
+  }
+
+  let stack = [];
+  let running = false;
+
+  let timeline = [];
+  let stepIndex = 0;
+
+  let stepT = 0;
+  let lastTs = null;
+
+  let active = null;
+
+  const CODE_DEFAULT =
+`stack = []
+
+push(x):
+  stack.append(x)      // put x on the TOP
+
+pop():
+  if stack is empty: error
+  return stack.removeLast()
+
+peek():
+  if stack is empty: error
+  return stack.last()`;
+
+  function codeForOp(op){
+    if(op === "push"){
+      return `push(x):
+  // 1) place a new element on the top
+  stack.append(x)
+
+Time: O(1) amortized (array)
+Space: O(1) extra`;
+    }
+    if(op === "pop"){
+      return `pop():
+  if stack is empty:
+    error
+  // remove and return the TOP element
+  return stack.removeLast()
+
+Time: O(1)
+Space: O(1) extra`;
+    }
+    if(op === "peek"){
+      return `peek():
+  if stack is empty:
+    error
+  // read the TOP without removing it
+  return stack.last()
+
+Time: O(1)
+Space: O(1) extra`;
+    }
+    return CODE_DEFAULT;
+  }
+
+  function makeStepPush(value, {demo=false} = {}){
+    return {
+      kind: "push",
+      value,
+      demo,
+      duration: 1.55,
+      label: `Push(${value})`,
+      detail: "Insert value at TOP",
+      narration: makeNarrationForPush(value)
+    };
+  }
+  function makeStepPop({demo=false} = {}){
+    return {
+      kind: "pop",
+      demo,
+      duration: 1.35,
+      label: "Pop()",
+      detail: "Remove and return TOP",
+      narration: null
+    };
+  }
+  function makeStepPeek({demo=false} = {}){
+    return {
+      kind: "peek",
+      demo,
+      duration: 1.10,
+      label: "Peek()",
+      detail: "Read TOP (no removal)",
+      narration: null
+    };
+  }
+
+  function makeNarrationForPush(value){
+    return [
+      {
+        at: 0.00,
+        phase: "setup",
+        title: `Push(${value}) — place a new item on TOP`,
+        subtitle: "Push inserts an element at the top of the stack. Only the top changes; older items keep their order.",
+        bullets: [
+          `We create a new element with value <b>${value}</b>.`,
+          "The element moves into the first free slot above the current top.",
+          "After the push, TOP points to the newly inserted element."
+        ],
+        callout: { title: "PUSH", line1: `incoming value = ${value}`, line2: "target = top + 1" }
+      },
+      {
+        at: 0.55,
+        phase: "landing",
+        title: `Push(${value}) — the element “lands”`,
+        subtitle: "Notice how the item slides into its slot and becomes the new top.",
+        bullets: [
+          "This is the “write” moment: the stack size increases by 1.",
+          "LIFO is established: the newest element is always removed first.",
+          "Typical time is O(1)."
+        ],
+        callout: { title: "STACK UPDATE", line1: "size = size + 1", line2: "top = new element" }
+      }
+    ];
+  }
+
+  function makeNarrationForPop(poppedValue){
+    const v = (poppedValue == null) ? "?" : poppedValue;
+    return [
+      {
+        at: 0.00,
+        phase: "selection",
+        title: "Pop() — remove the TOP element",
+        subtitle: "Pop always removes from the same end where pushes happened: the top.",
+        bullets: [
+          "We look at the current TOP.",
+          "That element is removed and returned.",
+          "The new TOP becomes the element just below it."
+        ],
+        callout: { title: "POP", line1: "remove TOP", line2: "size = size - 1" }
+      },
+      {
+        at: 0.55,
+        phase: "removal",
+        title: `Pop() — returned value = ${v}`,
+        subtitle: "This is exactly LIFO: the last pushed element is the first popped element.",
+        bullets: [
+          "Popped element leaves the stack frame.",
+          "Only the top pointer changes.",
+          "O(1) time for a typical stack."
+        ],
+        callout: { title: "RETURN", line1: `value = ${v}`, line2: "TOP moves down" }
+      }
+    ];
+  }
+
+  function makeNarrationForPeek(peekedValue){
+    const v = (peekedValue == null) ? "?" : peekedValue;
+    return [
+      {
+        at: 0.00,
+        phase: "read-only",
+        title: "Peek() — read TOP without removing",
+        subtitle: "Peek is useful for checking what's next to pop, without changing the stack.",
+        bullets: [
+          "We highlight the current TOP element.",
+          "The stack size does not change.",
+          "LIFO behavior remains intact."
+        ],
+        callout: { title: "PEEK", line1: `top value = ${v}`, line2: "no mutation" }
+      },
+      {
+        at: 0.55,
+        phase: "confirm",
+        title: `Peek() — top is still ${v}`,
+        subtitle: "Because we did not pop, the top stays the same after the operation.",
+        bullets: [
+          "Read-only operation.",
+          "O(1) time.",
+          "Good for parsing / backtracking / function call stacks."
+        ],
+        callout: { title: "CONFIRM", line1: "stack unchanged", line2: "top unchanged" }
+      }
+    ];
+  }
+
+  function demoScript(){
+    return [
+      makeStepPush(3, {demo:true}),
+      makeStepPush(7, {demo:true}),
+      makeStepPush(1, {demo:true}),
+      makeStepPeek({demo:true}),
+      makeStepPop({demo:true}),
+      makeStepPush(9, {demo:true}),
+      makeStepPop({demo:true}),
+      makeStepPop({demo:true}),
+      makeStepPush(5, {demo:true}),
+      makeStepPeek({demo:true}),
+    ];
+  }
+
+  function escapeHtml(str){
+    return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+
+  function rebuildStepList(){
+    stepList.innerHTML = "";
+    const total = timeline.length;
+    for(let i=0;i<total;i++){
+      const s = timeline[i];
+      const item = document.createElement("div");
+      item.className = "stepItem" + (i===stepIndex ? " active" : "");
+      item.innerHTML = `
+        <div class="idx">${i+1}</div>
+        <div class="txt">
+          <strong>${escapeHtml(s.label)}</strong>
+          <span>${escapeHtml(s.detail)}${s.demo ? "" : " (queued)"}</span>
+        </div>
+      `;
+      stepList.appendChild(item);
+    }
+    stepBadge.textContent = total ? `Step ${Math.min(stepIndex+1,total)} / ${total}` : "Step — / —";
+  }
+
+  function setCallout(visible, title, line1, line2){
+    callout.style.opacity = visible ? "1" : "0";
+    calloutTitle.textContent = title || "—";
+    calloutLine1.textContent = line1 || "—";
+    calloutLine2.textContent = line2 || "—";
+  }
+
+  function clearHalo(){ gHalo.innerHTML = ""; }
+  function renderHaloForBlock(block, intensity=1){
+    if(!block) return;
+    clearHalo();
+    const x = block.x;
+    const y = block.y;
+
+    const pad = 10;
+    const w = BLOCK_W + pad*2;
+    const h = BLOCK_H + pad*2;
+
+    const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    r.setAttribute("x", x - pad);
+    r.setAttribute("y", y - pad);
+    r.setAttribute("width", w);
+    r.setAttribute("height", h);
+    r.setAttribute("rx", 18);
+    r.setAttribute("fill", "rgba(34,211,238,0.10)");
+    r.setAttribute("stroke", "rgba(34,211,238,0.45)");
+    r.setAttribute("stroke-width", String(2));
+    r.setAttribute("opacity", String(0.8 * intensity));
+    r.setAttribute("filter", "url(#softGlow)");
+    gHalo.appendChild(r);
+  }
+
+  function updateHud(){
+    sizeCode.textContent = String(stack.length);
+    topCode.textContent = stack.length ? String(stack[stack.length-1].value) : "∅";
+
+    const kind = timeline[stepIndex]?.kind;
+    const label = kind ? kind.toUpperCase() : "—";
+    opBadge.textContent = `Operation: ${label}`;
+
+    const total = timeline.length || 1;
+    const within = active ? clamp(stepT / (active.duration || 1), 0, 1) : 0;
+    const pct = ((stepIndex + within) / total) * 100;
+    progressBar.style.width = `${clamp(pct,0,100)}%`;
+
+    statusDot.classList.toggle("paused", !running);
+    statusText.textContent = running ? "Playing" : "Paused";
+    playPauseBtn.textContent = running ? "Pause" : "Play";
+
+    const children = Array.from(stepList.children);
+    children.forEach((el, i)=>el.classList.toggle("active", i===stepIndex));
+
+    stepBadge.textContent = timeline.length
+      ? `Step ${Math.min(stepIndex+1, timeline.length)} / ${timeline.length}`
+      : "Step — / —";
+  }
+
+  function setNarrationFromStep(step, progress01){
+    if(!step){
+      nTitle.textContent = "All done — Try your own operations";
+      nSubtitle.textContent = "You can queue Push/Pop/Peek while paused, then press Play.";
+      nPhase.textContent = "phase: idle";
+      nBullet1.innerHTML = "A stack is <b>LIFO</b>: last in, first out.";
+      nBullet2.innerHTML = "Only the <b>top</b> end is used for insert/remove.";
+      nBullet3.innerHTML = "Try: Push(8), Push(2), Peek(), Pop().";
+      codeBlock.textContent = CODE_DEFAULT;
+      setCallout(false);
+      return;
+    }
+
+    if(!step.narration){
+      if(step.kind === "pop"){
+        const v = stack.length ? stack[stack.length-1].value : null;
+        step.narration = makeNarrationForPop(v);
+      } else if(step.kind === "peek"){
+        const v = stack.length ? stack[stack.length-1].value : null;
+        step.narration = makeNarrationForPeek(v);
+      } else {
+        step.narration = [{
+          at: 0, phase:"—", title: step.label, subtitle: step.detail,
+          bullets: ["Observe the animation.", "Stacks are LIFO.", "Operations touch only TOP."],
+          callout: {title:"—", line1:"—", line2:"—"}
+        }];
+      }
+    }
+
+    const narr = step.narration.slice().sort((a,b)=>a.at-b.at);
+    let chosen = narr[0];
+    for(const n of narr){
+      if(progress01 >= n.at) chosen = n;
+    }
+
+    nTitle.textContent = chosen.title;
+    nSubtitle.textContent = chosen.subtitle;
+    nPhase.textContent = `phase: ${chosen.phase}`;
+    nBullet1.innerHTML = chosen.bullets?.[0] ?? "";
+    nBullet2.innerHTML = chosen.bullets?.[1] ?? "";
+    nBullet3.innerHTML = chosen.bullets?.[2] ?? "";
+
+    codeBlock.textContent = codeForOp(step.kind);
+
+    if(chosen.callout){
+      setCallout(true, chosen.callout.title, chosen.callout.line1, chosen.callout.line2);
+    }else{
+      setCallout(false);
+    }
+  }
+
+  function blockColorForValue(v){
+    const h = (Number(v) * 47) % 360;
+    return hslToHex(h, 80, 55);
+  }
+
+  function layoutStackBlocks(){
+    for(let i=0;i<stack.length;i++){
+      const b = stack[i];
+      b.x = STACK_X + 10;
+      b.y = slotYForStackIndex(i);
+      b.opacity = 1;
+      b.scale = 1;
+      if(b._node) setNodeTransform(b);
+    }
+  }
+
+  function startStep(step){
+    active = step;
+    stepT = 0;
+
+    clearHalo();
+
+    if(step.kind === "pop"){
+      const v = stack.length ? stack[stack.length-1].value : null;
+      step.narration = makeNarrationForPop(v);
+    }
+    if(step.kind === "peek"){
+      const v = stack.length ? stack[stack.length-1].value : null;
+      step.narration = makeNarrationForPeek(v);
+    }
+
+    if(step.kind === "push"){
+      if(stack.length >= CAPACITY){
+        showToast("error", "Stack overflow: capacity reached.");
+        active._error = "overflow";
+        return;
+      }
+
+      const value = step.value;
+      const block = {
+        id: "b" + (blockIdCounter++),
+        value,
+        color: blockColorForValue(value),
+        x: SPAWN_X,
+        y: SPAWN_Y,
+        opacity: 1,
+        scale: 1
+      };
+      makeBlockNode(block);
+      setNodeTransform(block);
+
+      active._block = block;
+      active._from = { x: SPAWN_X, y: SPAWN_Y };
+      active._toIndex = stack.length;
+      active._to = { x: STACK_X + 10, y: slotYForStackIndex(active._toIndex) };
+    }
+
+    if(step.kind === "pop"){
+      if(stack.length <= 0){
+        showToast("error", "Stack underflow: nothing to pop.");
+        active._error = "underflow";
+        return;
+      }
+      const top = stack[stack.length-1];
+      active._block = top;
+      active._from = { x: top.x, y: top.y };
+      active._to = { x: 70, y: 70 };
+    }
+
+    if(step.kind === "peek"){
+      if(stack.length <= 0){
+        showToast("error", "Peek failed: stack is empty.");
+        active._error = "empty";
+        return;
+      }
+      active._block = stack[stack.length-1];
+    }
+  }
+
+  function finishStep(step){
+    if(!step) return;
+
+    if(step.kind === "push"){
+      if(step._error) return;
+      stack.push(step._block);
+      layoutStackBlocks();
+      renderHaloForBlock(stack[stack.length-1], 1);
+      showToast("ok", `Pushed ${step.value}.`);
+    }
+
+    if(step.kind === "pop"){
+      if(step._error) return;
+      const removed = stack.pop();
+      if(removed && removed._node) removed._node.remove();
+      layoutStackBlocks();
+      renderHaloForBlock(stack[stack.length-1], 0.9);
+      showToast("ok", `Popped ${removed.value}.`);
+    }
+
+    if(step.kind === "peek"){
+      if(step._error) return;
+      const v = stack[stack.length-1].value;
+      showToast("info", `Peek = ${v} (stack unchanged).`);
+      clearHalo();
+    }
+  }
+
+  function updateStep(step, dt){
+    if(!step) return;
+
+    const dur = step.duration || 1;
+    stepT = clamp(stepT + dt, 0, dur);
+    const p = clamp(stepT / dur, 0, 1);
+
+    setNarrationFromStep(step, p);
+
+    if(step._error){
+      clearHalo();
+      const intensity = 0.25 + 0.35*Math.sin(p*Math.PI);
+      gHalo.innerHTML = "";
+      const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+      r.setAttribute("x", STACK_X - 5);
+      r.setAttribute("y", STACK_Y_TOP - 10);
+      r.setAttribute("width", 260);
+      r.setAttribute("height", 320);
+      r.setAttribute("rx", 18);
+      r.setAttribute("fill", "rgba(251,113,133,0.06)");
+      r.setAttribute("stroke", `rgba(251,113,133,${0.35 + 0.35*intensity})`);
+      r.setAttribute("stroke-width", "2");
+      r.setAttribute("filter", "url(#softGlow)");
+      gHalo.appendChild(r);
+      return;
+    }
+
+    if(step.kind === "push"){
+      const b = step._block;
+      const t = easeOutCubic(p);
+      const y = lerp(step._from.y, step._to.y, t);
+      const x = lerp(step._from.x, step._to.x, easeInOutCubic(p));
+
+      b.x = x;
+      b.y = y;
+      b.scale = 1 - 0.02*Math.sin(p*Math.PI);
+      setNodeTransform(b);
+
+      const fakeBlock = {x: step._to.x, y: step._to.y};
+      renderHaloForBlock(fakeBlock, clamp(p*1.25, 0, 1));
+    }
+
+    if(step.kind === "pop"){
+      const b = step._block;
+      const t = easeInOutCubic(p);
+
+      const intensity = 0.25 + 0.75*Math.sin(clamp(p*1.2,0,1)*Math.PI);
+      renderHaloForBlock(b, intensity);
+
+      b.x = lerp(step._from.x, step._to.x, t);
+      b.y = lerp(step._from.y, step._to.y, t);
+      b.opacity = 1 - 0.25*t;
+      b.scale = 1 - 0.06*t;
+      setNodeTransform(b);
+    }
+
+    if(step.kind === "peek"){
+      const b = step._block;
+      const pulse = 0.55 + 0.45*Math.sin(p*2*Math.PI);
+      renderHaloForBlock(b, pulse);
+      b.scale = 1 + 0.015*Math.sin(p*2*Math.PI);
+      setNodeTransform(b);
+      if(p > 0.85) b.scale = 1;
+    }
+  }
+
+  function advanceStep(){
+    if(active){
+      finishStep(active);
+    }
+    active = null;
+    stepT = 0;
+
+    stepIndex++;
+    if(stepIndex >= timeline.length){
+      running = false;
+      updateHud();
+      setNarrationFromStep(null, 0);
+      setCallout(false);
+      return;
+    }
+
+    startStep(timeline[stepIndex]);
+    rebuildStepList();
+    updateHud();
+  }
+
+  function loop(ts){
+    if(lastTs == null) lastTs = ts;
+    const dtRaw = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    const speedMul = Number(speed.value) || 1;
+    speedLabel.textContent = `${speedMul.toFixed(2)}×`;
+
+    if(running){
+      const dt = clamp(dtRaw, 0, 0.05) * speedMul;
+
+      if(!active && timeline[stepIndex]){
+        startStep(timeline[stepIndex]);
+      }
+
+      if(active){
+        updateStep(active, dt);
+        if(stepT >= (active.duration || 1)){
+          advanceStep();
+        }
+      } else {
+        running = false;
+      }
+    } else {
+      if(!active && timeline[stepIndex]){
+        setNarrationFromStep(timeline[stepIndex], 0);
+      }
+    }
+
+    updateHud();
+    requestAnimationFrame(loop);
+  }
+
+  function setRunning(v){
+    running = v;
+    updateHud();
+  }
+
+  playPauseBtn.addEventListener("click", () => setRunning(!running));
+
+  resetBtn.addEventListener("click", () => {
+    setRunning(false);
+    stack = [];
+    gBlocks.innerHTML = "";
+    clearHalo();
+    setCallout(false);
+
+    timeline = demoScript();
+    stepIndex = 0;
+    active = null;
+    stepT = 0;
+
+    rebuildStepList();
+    updateHud();
+    setNarrationFromStep(timeline[0], 0);
+    showToast("info", "Demo reset.");
+  });
+
+  skipBtn.addEventListener("click", () => {
+    if(stepIndex >= timeline.length) return;
+
+    if(active){
+      stepT = active.duration || 1;
+      finishStep(active);
+      active = null;
+    }
+    showToast("warn", "Step skipped.");
+
+    if(stepIndex < timeline.length-1){
+      stepIndex++;
+      rebuildStepList();
+      updateHud();
+      setNarrationFromStep(timeline[stepIndex], 0);
+    } else {
+      stepIndex = timeline.length;
+      setRunning(false);
+      setNarrationFromStep(null, 0);
+    }
+  });
+
+  speed.addEventListener("input", () => {
+    speedLabel.textContent = `${Number(speed.value).toFixed(2)}×`;
+  });
+
+  function enqueueStep(step){
+    if(stepIndex >= timeline.length){
+      timeline.push(step);
+      if(timeline.length === 1) stepIndex = 0;
+    } else {
+      timeline.push(step);
+    }
+    rebuildStepList();
+    updateHud();
+  }
+
+  pushBtn.addEventListener("click", () => {
+    const v = Number(pushVal.value);
+    if(!Number.isFinite(v)){
+      showToast("error", "Please input a valid number.");
+      return;
+    }
+    showToast(running ? "warn" : "info", running ? "Queued Push while playing." : "Queued Push. Press Play to run.");
+    enqueueStep(makeStepPush(Math.trunc(v), {demo:false}));
+  });
+
+  popBtn.addEventListener("click", () => {
+    showToast(running ? "warn" : "info", running ? "Queued Pop while playing." : "Queued Pop. Press Play to run.");
+    enqueueStep(makeStepPop({demo:false}));
+  });
+
+  peekBtn.addEventListener("click", () => {
+    showToast(running ? "warn" : "info", running ? "Queued Peek while playing." : "Queued Peek. Press Play to run.");
+    enqueueStep(makeStepPeek({demo:false}));
+  });
+
+  function init(){
+    timeline = demoScript();
+    stepIndex = 0;
+    rebuildStepList();
+    layoutStackBlocks();
+    updateHud();
+    setNarrationFromStep(timeline[0], 0);
+    setCallout(true, "READY", "press Play", "or queue your own steps");
+  }
+
+  init();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
